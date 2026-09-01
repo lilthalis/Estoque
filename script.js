@@ -1,103 +1,140 @@
-// Array para armazenar os veículos
-let stock = [
-  { brand: 'Toyota', model: 'Corolla', year: 2021, color: 'Prata', price: 95000, status: 'Disponível' },
-  { brand: 'Honda', model: 'Civic', year: 2020, color: 'Preto', price: 88000, status: 'Vendido' },
-  { brand: 'Volkswagen', model: 'Nivus', year: 2022, color: 'Branco', price: 105000, status: 'Disponível' }
+// Carrega os dados salvos no navegador ou inicia com dados de exemplo
+let tickets = JSON.parse(localStorage.getItem('ti_tickets')) || [
+  { id: 101, requester: 'Ana Souza', department: 'RH', category: 'Hardware', priority: 'Alta', description: 'Notebook não liga', status: 'Aberto' },
+  { id: 102, requester: 'Carlos Lima', department: 'Vendas', category: 'Acessos', priority: 'Média', description: 'Reset de senha de e-mail', status: 'Concluído' },
+  { id: 103, requester: 'Mariana Luz', department: 'Financeiro', category: 'Software', priority: 'Crítica', description: 'Erro ao emitir Nota Fiscal', status: 'Aberto' }
 ];
 
-// Elementos do DOM
-const carForm = document.getElementById('carForm');
-const carTableBody = document.getElementById('carTableBody');
-const totalVehiclesEl = document.getElementById('totalVehicles');
-const totalValueEl = document.getElementById('totalValue');
-const reportDateEl = document.getElementById('reportDate');
-const btnExportPdf = document.getElementById('btnExportPdf');
+let categoryChartInstance = null;
+let statusChartInstance = null;
 
-// Inicialização
 document.addEventListener('DOMContentLoaded', () => {
-  updateReportDate();
-  renderTable();
+  updateDate();
+  renderAll();
 });
 
-// Atualiza a data do relatório
-function updateReportDate() {
+function updateDate() {
   const now = new Date();
-  reportDateEl.textContent = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
+  document.getElementById('reportDate').textContent = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
 }
 
-// Renderiza a tabela e atualiza os totais
+function saveData() {
+  localStorage.setItem('ti_tickets', JSON.stringify(tickets));
+}
+
+function renderAll() {
+  renderTable();
+  renderCharts();
+  saveData();
+}
+
 function renderTable() {
-  carTableBody.innerHTML = '';
-  let totalValue = 0;
+  const tbody = document.getElementById('ticketTableBody');
+  tbody.innerHTML = '';
 
-  stock.forEach((car, index) => {
-    totalValue += car.price;
+  let openCount = 0;
+  let closedCount = 0;
 
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${index + 1}</td>
-      <td><strong>${car.brand}</strong> ${car.model}</td>
-      <td>${car.year}</td>
-      <td>${car.color}</td>
-      <td><span class="badge badge-${car.status.toLowerCase()}">${car.status}</span></td>
-      <td>R$ ${car.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+  tickets.forEach((ticket, index) => {
+    if (ticket.status === 'Aberto') openCount++;
+    else closedCount++;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>#${ticket.id}</td>
+      <td><strong>${ticket.requester}</strong><br><small>${ticket.department}</small></td>
+      <td>${ticket.category}</td>
+      <td><span class="badge priority-${ticket.priority}">${ticket.priority}</span></td>
+      <td>${ticket.description}</td>
+      <td><span class="badge status-${ticket.status}">${ticket.status}</span></td>
       <td class="no-pdf">
-        <button class="btn-delete" onclick="deleteCar(${index})">Excluir</button>
+        <button class="btn-status" onclick="toggleStatus(${index})">
+          ${ticket.status === 'Aberto' ? 'Concluir' : 'Reabrir'}
+        </button>
       </td>
     `;
-    carTableBody.appendChild(row);
+    tbody.appendChild(tr);
   });
 
-  // Atualiza resumos
-  totalVehiclesEl.textContent = stock.length;
-  totalValueEl.textContent = `R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+  document.getElementById('totalTickets').textContent = tickets.length;
+  document.getElementById('openTickets').textContent = openCount;
+  document.getElementById('closedTickets').textContent = closedCount;
 }
 
-// Evento de envio do formulário
-carForm.addEventListener('submit', (e) => {
+// Alterna o status entre 'Aberto' e 'Concluído'
+function toggleStatus(index) {
+  tickets[index].status = tickets[index].status === 'Aberto' ? 'Concluído' : 'Aberto';
+  renderAll();
+}
+
+// Formulário de Cadastro
+document.getElementById('ticketForm').addEventListener('submit', (e) => {
   e.preventDefault();
 
-  const newCar = {
-    brand: document.getElementById('brand').value,
-    model: document.getElementById('model').value,
-    year: parseInt(document.getElementById('year').value),
-    color: document.getElementById('color').value,
-    price: parseFloat(document.getElementById('price').value),
-    status: document.getElementById('status').value
+  const newTicket = {
+    id: Math.floor(100 + Math.random() * 900),
+    requester: document.getElementById('requester').value,
+    department: document.getElementById('department').value,
+    category: document.getElementById('category').value,
+    priority: document.getElementById('priority').value,
+    description: document.getElementById('description').value,
+    status: 'Aberto'
   };
 
-  stock.push(newCar);
-  renderTable();
-  carForm.reset();
+  tickets.push(newTicket);
+  renderAll();
+  e.target.reset();
 });
 
-// Remover veículo
-function deleteCar(index) {
-  stock.splice(index, 1);
-  renderTable();
+// Renderização dos Gráficos com Chart.js
+function renderCharts() {
+  const categories = ['Hardware', 'Software', 'Redes', 'Acessos'];
+  const categoryCounts = categories.map(cat => tickets.filter(t => t.category === cat).length);
+
+  const openCount = tickets.filter(t => t.status === 'Aberto').length;
+  const closedCount = tickets.filter(t => t.status === 'Concluído').length;
+
+  // Gráfico de Categorias
+  if (categoryChartInstance) categoryChartInstance.destroy();
+  const ctxCat = document.getElementById('categoryChart').getContext('2d');
+  categoryChartInstance = new Chart(ctxCat, {
+    type: 'bar',
+    data: {
+      labels: categories,
+      datasets: [{ label: 'Qtd Chamados', data: categoryCounts, backgroundColor: '#0284c7' }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+  });
+
+  // Gráfico de Status
+  if (statusChartInstance) statusChartInstance.destroy();
+  const ctxStatus = document.getElementById('statusChart').getContext('2d');
+  statusChartInstance = new Chart(ctxStatus, {
+    type: 'doughnut',
+    data: {
+      labels: ['Aberto', 'Concluído'],
+      datasets: [{ data: [openCount, closedCount], backgroundColor: ['#f97316', '#16a34a'] }]
+    },
+    options: { responsive: true }
+  });
 }
 
-// Exportar para PDF
-btnExportPdf.addEventListener('click', () => {
-  updateReportDate();
-
-  // Esconde os botões de ação na hora de gerar o PDF
+// Exportação para PDF
+document.getElementById('btnExportPdf').addEventListener('click', () => {
+  updateDate();
   const noPdfElements = document.querySelectorAll('.no-pdf');
   noPdfElements.forEach(el => el.style.display = 'none');
 
   const element = document.getElementById('reportArea');
-  
   const options = {
-    margin:       10,
-    filename:     `relatorio_estoque_${new Date().toISOString().slice(0,10)}.pdf`,
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2 },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    margin: 8,
+    filename: `relatorio_ti_${new Date().toISOString().slice(0,10)}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
 
-  // Gera o PDF
   html2pdf().set(options).from(element).save().then(() => {
-    // Reexibe os elementos após salvar
     noPdfElements.forEach(el => el.style.display = '');
   });
 });

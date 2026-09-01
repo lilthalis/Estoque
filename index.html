@@ -3,89 +3,123 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gerenciador de Estoque de Veículos</title>
+  <title>Sistema de Gestão de Chamados de TI</title>
   <link rel="stylesheet" href="style.css">
+  <!-- Chart.js para gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- html2pdf para exportação -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
   <div class="container">
     <header>
-      <h1>🚗 Relatório de Estoque de Veículos</h1>
-      <p>Cadastre os veículos abaixo e gere o relatório oficial em PDF.</p>
+      <h1>💻 Painel de Chamados de TI</h1>
+      <p>Gerenciamento de Suporte Técnico & Relatório Operacional</p>
     </header>
 
+    <!-- Formulário de Abertura de Chamado -->
     <section class="card form-section">
-      <h2>Cadastrar Novo Veículo</h2>
-      <form id="carForm">
+      <h2>Abrir Novo Chamado</h2>
+      <form id="ticketForm">
         <div class="form-group">
-          <label for="brand">Marca</label>
-          <input type="text" id="brand" placeholder="Ex: Toyota" required>
+          <label for="requester">Solicitante</label>
+          <input type="text" id="requester" placeholder="Ex: João Silva" required>
         </div>
         <div class="form-group">
-          <label for="model">Modelo</label>
-          <input type="text" id="model" placeholder="Ex: Corolla" required>
-        </div>
-        <div class="form-group">
-          <label for="year">Ano</label>
-          <input type="number" id="year" placeholder="Ex: 2022" min="1900" max="2099" required>
-        </div>
-        <div class="form-group">
-          <label for="color">Cor</label>
-          <input type="text" id="color" placeholder="Ex: Prata" required>
-        </div>
-        <div class="form-group">
-          <label for="price">Preço (R$)</label>
-          <input type="number" id="price" step="0.01" placeholder="Ex: 85000" required>
-        </div>
-        <div class="form-group">
-          <label for="status">Status</label>
-          <select id="status">
-            <option value="Disponível">Disponível</option>
-            <option value="Vendido">Vendido</option>
-            <option value="Reservado">Reservado</option>
+          <label for="department">Setor</label>
+          <select id="department" required>
+            <option value="Financeiro">Financeiro</option>
+            <option value="RH">Recursos Humanos</option>
+            <option value="Vendas">Vendas</option>
+            <option value="TI / Infra">TI / Infra</option>
           </select>
         </div>
-        <button type="submit" class="btn btn-add">+ Adicionar Veículo</button>
+        <div class="form-group">
+          <label for="category">Categoria</label>
+          <select id="category" required>
+            <option value="Hardware">Hardware (Equipamentos)</option>
+            <option value="Software">Software / Sistemas</option>
+            <option value="Redes">Redes e Internet</option>
+            <option value="Acessos">Acessos e Senhas</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="priority">Prioridade</label>
+          <select id="priority" required>
+            <option value="Baixa">Baixa</option>
+            <option value="Média">Média</option>
+            <option value="Alta">Alta</option>
+            <option value="Crítica">Crítica</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label for="description">Descrição do Problema</label>
+          <input type="text" id="description" placeholder="Ex: Monitor não liga após queda de energia" required>
+        </div>
+        <button type="submit" class="btn btn-add">+ Registrar Chamado</button>
       </form>
     </section>
 
+    <!-- Relatório / Dashboard que irá para o PDF -->
     <div id="reportArea">
       <div class="report-header">
-        <h2>RELATÓRIO DE ESTOQUE DE VEÍCULOS</h2>
-        <p id="reportDate"></p>
+        <div>
+          <h2>RELATÓRIO DE DESEMPENHO - SUPORTE DE TI</h2>
+          <p id="reportDate"></p>
+        </div>
       </div>
 
+      <!-- Resumo Geral -->
       <div class="summary-cards">
         <div class="summary-card">
-          <span>Total de Veículos</span>
-          <strong id="totalVehicles">0</strong>
+          <span>Total de Chamados</span>
+          <strong id="totalTickets">0</strong>
         </div>
-        <div class="summary-card">
-          <span>Valor Total do Estoque</span>
-          <strong id="totalValue">R$ 0,00</strong>
+        <div class="summary-card border-orange">
+          <span>Em Aberto</span>
+          <strong id="openTickets">0</strong>
+        </div>
+        <div class="summary-card border-green">
+          <span>Concluídos</span>
+          <strong id="closedTickets">0</strong>
         </div>
       </div>
 
+      <!-- Seção de Gráficos -->
+      <div class="charts-container">
+        <div class="chart-box">
+          <h3>Chamados por Categoria</h3>
+          <canvas id="categoryChart"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>Status dos Chamados</h3>
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Tabela de Chamados -->
       <table class="data-table">
         <thead>
           <tr>
-            <th>#</th>
-            <th>Marca / Modelo</th>
-            <th>Ano</th>
-            <th>Cor</th>
+            <th># ID</th>
+            <th>Solicitante / Setor</th>
+            <th>Categoria</th>
+            <th>Prioridade</th>
+            <th>Descrição</th>
             <th>Status</th>
-            <th>Preço (R$)</th>
             <th class="no-pdf">Ações</th>
           </tr>
         </thead>
-        <tbody id="carTableBody">
-          </tbody>
+        <tbody id="ticketTableBody">
+          <!-- Conteúdo dinâmico -->
+        </tbody>
       </table>
     </div>
 
+    <!-- Botões Globais -->
     <div class="actions">
-      <button id="btnExportPdf" class="btn btn-pdf">📄 Baixar Relatório em PDF</button>
+      <button id="btnExportPdf" class="btn btn-pdf">📄 Gerar Relatório em PDF</button>
     </div>
   </div>
 
