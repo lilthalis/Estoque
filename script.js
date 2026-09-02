@@ -1,140 +1,27 @@
-// Carrega os dados salvos no navegador ou inicia com dados de exemplo
-let tickets = JSON.parse(localStorage.getItem('ti_tickets')) || [
-  { id: 101, requester: 'Ana Souza', department: 'RH', category: 'Hardware', priority: 'Alta', description: 'Notebook não liga', status: 'Aberto' },
-  { id: 102, requester: 'Carlos Lima', department: 'Vendas', category: 'Acessos', priority: 'Média', description: 'Reset de senha de e-mail', status: 'Concluído' },
-  { id: 103, requester: 'Mariana Luz', department: 'Financeiro', category: 'Software', priority: 'Crítica', description: 'Erro ao emitir Nota Fiscal', status: 'Aberto' }
+const STORAGE_KEY = 'central_ti_tickets_v1';
+const categories = ['Hardware', 'Software', 'Redes', 'Acessos'];
+const seedTickets = [
+  { id: 'TI-1001', requester: 'Ana Souza', department: 'RH', category: 'Hardware', priority: 'Alta', description: 'Notebook não liga após atualização.', status: 'Aberto' },
+  { id: 'TI-1002', requester: 'Carlos Lima', department: 'Vendas', category: 'Acessos', priority: 'Média', description: 'Solicita redefinição de senha do e-mail.', status: 'Concluído' },
+  { id: 'TI-1003', requester: 'Mariana Luz', department: 'Financeiro', category: 'Software', priority: 'Crítica', description: 'Erro ao emitir Nota Fiscal.', status: 'Aberto' }
 ];
+let tickets = loadTickets();
+let categoryChart;
+let statusChart;
+let toastTimer;
 
-let categoryChartInstance = null;
-let statusChartInstance = null;
-
-document.addEventListener('DOMContentLoaded', () => {
-  updateDate();
-  renderAll();
-});
-
-function updateDate() {
-  const now = new Date();
-  document.getElementById('reportDate').textContent = `Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
-}
-
-function saveData() {
-  localStorage.setItem('ti_tickets', JSON.stringify(tickets));
-}
-
-function renderAll() {
-  renderTable();
-  renderCharts();
-  saveData();
-}
-
-function renderTable() {
-  const tbody = document.getElementById('ticketTableBody');
-  tbody.innerHTML = '';
-
-  let openCount = 0;
-  let closedCount = 0;
-
-  tickets.forEach((ticket, index) => {
-    if (ticket.status === 'Aberto') openCount++;
-    else closedCount++;
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>#${ticket.id}</td>
-      <td><strong>${ticket.requester}</strong><br><small>${ticket.department}</small></td>
-      <td>${ticket.category}</td>
-      <td><span class="badge priority-${ticket.priority}">${ticket.priority}</span></td>
-      <td>${ticket.description}</td>
-      <td><span class="badge status-${ticket.status}">${ticket.status}</span></td>
-      <td class="no-pdf">
-        <button class="btn-status" onclick="toggleStatus(${index})">
-          ${ticket.status === 'Aberto' ? 'Concluir' : 'Reabrir'}
-        </button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  document.getElementById('totalTickets').textContent = tickets.length;
-  document.getElementById('openTickets').textContent = openCount;
-  document.getElementById('closedTickets').textContent = closedCount;
-}
-
-// Alterna o status entre 'Aberto' e 'Concluído'
-function toggleStatus(index) {
-  tickets[index].status = tickets[index].status === 'Aberto' ? 'Concluído' : 'Aberto';
-  renderAll();
-}
-
-// Formulário de Cadastro
-document.getElementById('ticketForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-
-  const newTicket = {
-    id: Math.floor(100 + Math.random() * 900),
-    requester: document.getElementById('requester').value,
-    department: document.getElementById('department').value,
-    category: document.getElementById('category').value,
-    priority: document.getElementById('priority').value,
-    description: document.getElementById('description').value,
-    status: 'Aberto'
-  };
-
-  tickets.push(newTicket);
-  renderAll();
-  e.target.reset();
-});
-
-// Renderização dos Gráficos com Chart.js
-function renderCharts() {
-  const categories = ['Hardware', 'Software', 'Redes', 'Acessos'];
-  const categoryCounts = categories.map(cat => tickets.filter(t => t.category === cat).length);
-
-  const openCount = tickets.filter(t => t.status === 'Aberto').length;
-  const closedCount = tickets.filter(t => t.status === 'Concluído').length;
-
-  // Gráfico de Categorias
-  if (categoryChartInstance) categoryChartInstance.destroy();
-  const ctxCat = document.getElementById('categoryChart').getContext('2d');
-  categoryChartInstance = new Chart(ctxCat, {
-    type: 'bar',
-    data: {
-      labels: categories,
-      datasets: [{ label: 'Qtd Chamados', data: categoryCounts, backgroundColor: '#0284c7' }]
-    },
-    options: { responsive: true, plugins: { legend: { display: false } } }
-  });
-
-  // Gráfico de Status
-  if (statusChartInstance) statusChartInstance.destroy();
-  const ctxStatus = document.getElementById('statusChart').getContext('2d');
-  statusChartInstance = new Chart(ctxStatus, {
-    type: 'doughnut',
-    data: {
-      labels: ['Aberto', 'Concluído'],
-      datasets: [{ data: [openCount, closedCount], backgroundColor: ['#f97316', '#16a34a'] }]
-    },
-    options: { responsive: true }
-  });
-}
-
-// Exportação para PDF
-document.getElementById('btnExportPdf').addEventListener('click', () => {
-  updateDate();
-  const noPdfElements = document.querySelectorAll('.no-pdf');
-  noPdfElements.forEach(el => el.style.display = 'none');
-
-  const element = document.getElementById('reportArea');
-  const options = {
-    margin: 8,
-    filename: `relatorio_ti_${new Date().toISOString().slice(0,10)}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  };
-
-  html2pdf().set(options).from(element).save().then(() => {
-    noPdfElements.forEach(el => el.style.display = '');
-  });
-});
+document.addEventListener('DOMContentLoaded', init);
+function init() { updateDate(); renderAll(); document.getElementById('ticketForm').addEventListener('submit', addTicket); document.getElementById('ticketTableBody').addEventListener('click', handleTableAction); document.getElementById('btnExportPdf').addEventListener('click', exportPdf); }
+function loadTickets() { try { const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); return Array.isArray(saved) ? saved : seedTickets; } catch { return seedTickets; } }
+function saveTickets() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets)); }
+function updateDate() { document.getElementById('reportDate').textContent = `Atualizado em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short' }).format(new Date())}`; }
+function renderAll() { renderSummary(); renderTable(); renderCharts(); saveTickets(); }
+function renderSummary() { const open = tickets.filter(ticket => ticket.status === 'Aberto').length; document.getElementById('totalTickets').textContent = tickets.length; document.getElementById('openTickets').textContent = open; document.getElementById('closedTickets').textContent = tickets.length - open; document.getElementById('tableCount').textContent = `${tickets.length} ${tickets.length === 1 ? 'registro' : 'registros'}`; }
+function renderTable() { const tbody = document.getElementById('ticketTableBody'); const empty = document.getElementById('emptyState'); tbody.replaceChildren(); empty.hidden = tickets.length !== 0; tickets.forEach(ticket => { const row = document.createElement('tr'); row.innerHTML = `<td class="ticket-id">${escapeHtml(ticket.id)}</td><td><span class="requester">${escapeHtml(ticket.requester)}</span><span class="department">${escapeHtml(ticket.department)}</span></td><td>${escapeHtml(ticket.category)}</td><td><span class="badge priority-${escapeHtml(ticket.priority)}">${escapeHtml(ticket.priority)}</span></td><td class="description">${escapeHtml(ticket.description)}</td><td><span class="badge status-${escapeHtml(ticket.status)}">${escapeHtml(ticket.status)}</span></td><td class="no-pdf"><button class="status-button" type="button" data-id="${escapeHtml(ticket.id)}">${ticket.status === 'Aberto' ? 'Concluir' : 'Reabrir'}</button></td>`; tbody.appendChild(row); }); }
+function handleTableAction(event) { const button = event.target.closest('[data-id]'); if (!button) return; const ticket = tickets.find(item => item.id === button.dataset.id); if (!ticket) return; ticket.status = ticket.status === 'Aberto' ? 'Concluído' : 'Aberto'; updateDate(); renderAll(); showToast(`Chamado ${ticket.id} ${ticket.status.toLowerCase()}.`); }
+function addTicket(event) { event.preventDefault(); const form = event.currentTarget; const values = Object.fromEntries(new FormData(form)); const ticket = { id: nextId(), requester: values.requester.trim(), department: values.department, category: values.category, priority: values.priority, description: values.description.trim(), status: 'Aberto' }; tickets.unshift(ticket); form.reset(); updateDate(); renderAll(); showToast(`${ticket.id} registrado com sucesso.`); }
+function nextId() { const highest = tickets.reduce((max, ticket) => Math.max(max, Number(String(ticket.id).replace(/\D/g, '')) || 1000), 1000); return `TI-${highest + 1}`; }
+function renderCharts() { if (!window.Chart) return; const categoryData = categories.map(category => tickets.filter(ticket => ticket.category === category).length); const open = tickets.filter(ticket => ticket.status === 'Aberto').length; const common = { responsive:true, maintainAspectRatio:false, animation:{ duration:250 }, plugins:{ legend:{ labels:{ color:'#617287', boxWidth:10, font:{ size:11, weight:'600' } } } } }; if (categoryChart) categoryChart.destroy(); categoryChart = new Chart(document.getElementById('categoryChart'), { type:'bar', data:{ labels:categories, datasets:[{ data:categoryData, backgroundColor:'#27b7e5', borderRadius:5, maxBarThickness:38 }] }, options:{ ...common, plugins:{ ...common.plugins, legend:{ display:false } }, scales:{ x:{ grid:{ display:false }, ticks:{ color:'#617287', font:{ size:11 } } }, y:{ beginAtZero:true, ticks:{ precision:0, color:'#718196', font:{ size:10 } }, grid:{ color:'#edf2f5' }, border:{ display:false } } } } }); if (statusChart) statusChart.destroy(); statusChart = new Chart(document.getElementById('statusChart'), { type:'doughnut', data:{ labels:['Em aberto','Concluídos'], datasets:[{ data:[open,tickets.length-open], backgroundColor:['#f5a623','#2bbb77'], borderWidth:0, hoverOffset:4 }] }, options:{ ...common, cutout:'67%', plugins:{ ...common.plugins, legend:{ position:'bottom', labels:{ ...common.plugins.legend.labels, padding:15 } } } } }); }
+function escapeHtml(value) { const node = document.createElement('div'); node.textContent = value; return node.innerHTML; }
+function showToast(message) { const toast = document.getElementById('toast'); toast.textContent = message; toast.classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('visible'), 2800); }
+async function exportPdf() { if (!window.html2pdf) { showToast('Biblioteca de PDF indisponível. Tente novamente.'); return; } const button = document.getElementById('btnExportPdf'); button.disabled = true; button.textContent = 'Gerando PDF…'; updateDate(); try { await new Promise(resolve => requestAnimationFrame(resolve)); await html2pdf().set({ margin:[8,8,8,8], filename:`relatorio-central-ti-${new Date().toISOString().slice(0,10)}.pdf`, image:{ type:'jpeg', quality:.98 }, html2canvas:{ scale:2, useCORS:true }, jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' }, pagebreak:{ mode:['css','legacy'] } }).from(document.getElementById('reportArea')).save(); showToast('Relatório exportado em PDF.'); } finally { button.disabled = false; button.innerHTML = '<span aria-hidden="true">↓</span> Exportar relatório em PDF'; } }

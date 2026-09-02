@@ -3,126 +3,71 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Gestão de Chamados de TI</title>
+  <meta name="theme-color" content="#071426">
+  <title>Central TI | Painel de Chamados</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <link rel="stylesheet" href="style.css">
-  <!-- Chart.js para gráficos -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- html2pdf para exportação -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script defer src="script.js"></script>
 </head>
 <body>
-
-  <div class="container">
-    <header>
-      <h1>💻 Painel de Chamados de TI</h1>
-      <p>Gerenciamento de Suporte Técnico & Relatório Operacional</p>
+  <main class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="#top" aria-label="Central TI, início">
+        <span class="brand-mark" aria-hidden="true">⌘</span>
+        <span><strong>central</strong>TI<small>SUPORTE OPERACIONAL</small></span>
+      </a>
+      <div class="header-copy">
+        <p class="eyebrow">OPERAÇÕES &amp; SUPORTE</p>
+        <h1>Painel de chamados</h1>
+      </div>
+      <div class="live-status"><i></i> Sistema operacional</div>
     </header>
 
-    <!-- Formulário de Abertura de Chamado -->
-    <section class="card form-section">
-      <h2>Abrir Novo Chamado</h2>
+    <section class="intake-card" aria-labelledby="intake-title">
+      <div class="section-intro">
+        <span class="section-icon" aria-hidden="true">+</span>
+        <div><p class="eyebrow">NOVA SOLICITAÇÃO</p><h2 id="intake-title">Abrir chamado</h2></div>
+      </div>
       <form id="ticketForm">
-        <div class="form-group">
-          <label for="requester">Solicitante</label>
-          <input type="text" id="requester" placeholder="Ex: João Silva" required>
-        </div>
-        <div class="form-group">
-          <label for="department">Setor</label>
-          <select id="department" required>
-            <option value="Financeiro">Financeiro</option>
-            <option value="RH">Recursos Humanos</option>
-            <option value="Vendas">Vendas</option>
-            <option value="TI / Infra">TI / Infra</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="category">Categoria</label>
-          <select id="category" required>
-            <option value="Hardware">Hardware (Equipamentos)</option>
-            <option value="Software">Software / Sistemas</option>
-            <option value="Redes">Redes e Internet</option>
-            <option value="Acessos">Acessos e Senhas</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="priority">Prioridade</label>
-          <select id="priority" required>
-            <option value="Baixa">Baixa</option>
-            <option value="Média">Média</option>
-            <option value="Alta">Alta</option>
-            <option value="Crítica">Crítica</option>
-          </select>
-        </div>
-        <div class="form-group full-width">
-          <label for="description">Descrição do Problema</label>
-          <input type="text" id="description" placeholder="Ex: Monitor não liga após queda de energia" required>
-        </div>
-        <button type="submit" class="btn btn-add">+ Registrar Chamado</button>
+        <label>Solicitante<input id="requester" name="requester" type="text" placeholder="Ex.: Joana Martins" required maxlength="80" autocomplete="name"></label>
+        <label>Setor<select id="department" name="department" required><option value="Financeiro">Financeiro</option><option value="RH">RH</option><option value="Vendas">Vendas</option><option value="TI">TI</option></select></label>
+        <label>Categoria<select id="category" name="category" required><option value="Hardware">Hardware</option><option value="Software">Software</option><option value="Redes">Redes</option><option value="Acessos">Acessos</option></select></label>
+        <label>Prioridade<select id="priority" name="priority" required><option value="Baixa">Baixa</option><option value="Média">Média</option><option value="Alta">Alta</option><option value="Crítica">Crítica</option></select></label>
+        <label class="description-field">Descrição do problema<textarea id="description" name="description" placeholder="Descreva o problema e os impactos para a operação." required maxlength="300" rows="1"></textarea></label>
+        <button class="primary-button" type="submit"><span aria-hidden="true">+</span> Registrar chamado</button>
       </form>
     </section>
 
-    <!-- Relatório / Dashboard que irá para o PDF -->
-    <div id="reportArea">
-      <div class="report-header">
-        <div>
-          <h2>RELATÓRIO DE DESEMPENHO - SUPORTE DE TI</h2>
-          <p id="reportDate"></p>
-        </div>
+    <section id="reportArea" aria-label="Relatório operacional de suporte">
+      <div class="report-heading">
+        <div><p class="eyebrow">RELATÓRIO OPERACIONAL</p><h2>Desempenho do suporte de TI</h2><p id="reportDate" class="report-date"></p></div>
+        <div class="report-stamp"><span>central</span>TI<small>CONFIDENCIAL</small></div>
       </div>
 
-      <!-- Resumo Geral -->
-      <div class="summary-cards">
-        <div class="summary-card">
-          <span>Total de Chamados</span>
-          <strong id="totalTickets">0</strong>
-        </div>
-        <div class="summary-card border-orange">
-          <span>Em Aberto</span>
-          <strong id="openTickets">0</strong>
-        </div>
-        <div class="summary-card border-green">
-          <span>Concluídos</span>
-          <strong id="closedTickets">0</strong>
-        </div>
+      <div class="summary-cards" aria-label="Resumo dos chamados">
+        <article class="summary-card total"><span>Total de chamados</span><strong id="totalTickets">0</strong><small>Base registrada</small></article>
+        <article class="summary-card open"><span>Em aberto</span><strong id="openTickets">0</strong><small>Aguardam atendimento</small></article>
+        <article class="summary-card done"><span>Concluídos</span><strong id="closedTickets">0</strong><small>Atendimentos finalizados</small></article>
       </div>
 
-      <!-- Seção de Gráficos -->
       <div class="charts-container">
-        <div class="chart-box">
-          <h3>Chamados por Categoria</h3>
-          <canvas id="categoryChart"></canvas>
-        </div>
-        <div class="chart-box">
-          <h3>Status dos Chamados</h3>
-          <canvas id="statusChart"></canvas>
-        </div>
+        <article class="chart-box"><div class="chart-title"><div><p class="eyebrow">DISTRIBUIÇÃO</p><h3>Chamados por categoria</h3></div><span class="chart-key blue"></span></div><div class="chart-canvas"><canvas id="categoryChart" aria-label="Gráfico de barras de chamados por categoria"></canvas></div></article>
+        <article class="chart-box"><div class="chart-title"><div><p class="eyebrow">ANDAMENTO</p><h3>Status dos chamados</h3></div></div><div class="chart-canvas"><canvas id="statusChart" aria-label="Gráfico de rosca do status dos chamados"></canvas></div></article>
       </div>
 
-      <!-- Tabela de Chamados -->
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th># ID</th>
-            <th>Solicitante / Setor</th>
-            <th>Categoria</th>
-            <th>Prioridade</th>
-            <th>Descrição</th>
-            <th>Status</th>
-            <th class="no-pdf">Ações</th>
-          </tr>
-        </thead>
-        <tbody id="ticketTableBody">
-          <!-- Conteúdo dinâmico -->
-        </tbody>
-      </table>
-    </div>
+      <section class="table-section" aria-labelledby="table-title">
+        <div class="table-title"><div><p class="eyebrow">DETALHAMENTO</p><h3 id="table-title">Chamados cadastrados</h3></div><span id="tableCount">0 registros</span></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Solicitante <span>/ Setor</span></th><th>Categoria</th><th>Prioridade</th><th>Descrição</th><th>Status</th><th class="no-pdf">Ação</th></tr></thead><tbody id="ticketTableBody"></tbody></table></div>
+        <p id="emptyState" class="empty-state" hidden>Nenhum chamado registrado. Use o formulário acima para iniciar.</p>
+      </section>
+      <footer class="report-footer"><span>Central TI · Gestão de suporte</span><span>Documento gerado automaticamente</span></footer>
+    </section>
 
-    <!-- Botões Globais -->
-    <div class="actions">
-      <button id="btnExportPdf" class="btn btn-pdf">📄 Gerar Relatório em PDF</button>
-    </div>
-  </div>
-
-  <script src="script.js"></script>
+    <div class="actions"><button id="btnExportPdf" class="pdf-button" type="button"><span aria-hidden="true">↓</span> Exportar relatório em PDF</button></div>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
